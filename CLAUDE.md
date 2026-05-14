@@ -1,129 +1,135 @@
-# TradingView MCP — Claude Instructions
+# TradingView MCP — Instruccions Claude
 
-68 tools for reading and controlling a live TradingView Desktop chart via CDP (port 9222).
+68 eines per llegir i controlar un gràfic TradingView Desktop en directe via CDP (port 9222).
 
-## Decision Tree — Which Tool When
+## Arbre de decisió — Quina eina utilitzar
 
-### "What's on my chart right now?"
-1. `chart_get_state` → symbol, timeframe, chart type, list of all indicators with entity IDs
-2. `data_get_study_values` → current numeric values from all visible indicators (RSI, MACD, BBands, EMAs, etc.)
-3. `quote_get` → real-time price, OHLC, volume for current symbol
+### "Què hi ha al gràfic ara mateix?"
+1. `chart_get_state` → símbol, timeframe, tipus de gràfic, llista de tots els indicadors amb entity IDs
+2. `data_get_study_values` → valors numèrics actuals de tots els indicadors visibles (RSI, MACD, BBands, EMAs, etc.)
+3. `quote_get` → preu real, OHLC, volum per al símbol actual
 
-### "What levels/lines/labels are showing?"
-Custom Pine indicators draw with `line.new()`, `label.new()`, `table.new()`, `box.new()`. These are invisible to normal data tools. Use:
+### "Quins nivells/línies/etiquetes apareixen?"
+Els indicadors Pine personalitzats dibuixen amb `line.new()`, `label.new()`, `table.new()`, `box.new()`. No són visibles a les eines de dades normals. Usar:
 
-1. `data_get_pine_lines` → horizontal price levels drawn by indicators (deduplicated, sorted high→low)
-2. `data_get_pine_labels` → text annotations with prices (e.g., "PDH 24550", "Bias Long ✓")
-3. `data_get_pine_tables` → table data formatted as rows (e.g., session stats, analytics dashboards)
-4. `data_get_pine_boxes` → price zones / ranges as {high, low} pairs
+1. `data_get_pine_lines` → nivells de preu horitzontals dibuixats per indicadors (deduplicats, ordenats alt→baix)
+2. `data_get_pine_labels` → anotacions de text amb preus (ex: "PDH 24550", "Bias Long ✓")
+3. `data_get_pine_tables` → dades de taula com a files (ex: estadístiques de sessió, dashboards analítics)
+4. `data_get_pine_boxes` → zones de preu / rangs com a parells {high, low}
 
-Use `study_filter` parameter to target a specific indicator by name substring (e.g., `study_filter: "Profiler"`).
+Usar el paràmetre `study_filter` per filtrar un indicador concret per substring del nom (ex: `study_filter: "Profiler"`).
 
-### "Give me price data"
-- `data_get_ohlcv` with `summary: true` → compact stats (high, low, range, change%, avg volume, last 5 bars)
-- `data_get_ohlcv` without summary → all bars (use `count` to limit, default 100)
-- `quote_get` → single latest price snapshot
+### "Dona'm dades de preu"
+- `data_get_ohlcv` amb `summary: true` → estadístiques compactes (high, low, range, change%, volum mig, últimes 5 barres)
+- `data_get_ohlcv` sense summary → totes les barres (usar `count` per limitar, default 100)
+- `quote_get` → snapshot puntual del darrer preu
 
-### "Analyze my chart" (full report workflow)
-1. `quote_get` → current price
-2. `data_get_study_values` → all indicator readings
-3. `data_get_pine_lines` → key price levels from custom indicators
-4. `data_get_pine_labels` → labeled levels with context (e.g., "Settlement", "ASN O/U")
-5. `data_get_pine_tables` → session stats, analytics tables
-6. `data_get_ohlcv` with `summary: true` → price action summary
-7. `capture_screenshot` → visual confirmation
+### "Analitza el meu gràfic" (workflow informe complet)
+1. `quote_get` → preu actual
+2. `data_get_study_values` → lectures de tots els indicadors
+3. `data_get_pine_lines` → nivells de preu clau d'indicadors personalitzats
+4. `data_get_pine_labels` → nivells etiquetats amb context (ex: "Settlement", "ASN O/U")
+5. `data_get_pine_tables` → estadístiques de sessió, taules analítiques
+6. `data_get_ohlcv` amb `summary: true` → resum de l'acció del preu
+7. `capture_screenshot` → confirmació visual
 
-### "Change the chart"
-- `chart_set_symbol` → switch ticker (e.g., "AAPL", "ES1!", "NYMEX:CL1!")
-- `chart_set_timeframe` → switch resolution (e.g., "1", "5", "15", "60", "D", "W")
-- `chart_set_type` → switch chart style (Candles, HeikinAshi, Line, Area, Renko, etc.)
-- `chart_manage_indicator` → add or remove studies (use full name: "Relative Strength Index", not "RSI")
-- `chart_scroll_to_date` → jump to a date (ISO format: "2025-01-15")
-- `chart_set_visible_range` → zoom to exact date range (unix timestamps)
+### "Canvia el gràfic"
+- `chart_set_symbol` → canviar ticker (ex: "AAPL", "ES1!", "NYMEX:CL1!")
+- `chart_set_timeframe` → canviar resolució (ex: "1", "5", "15", "60", "D", "W")
+- `chart_set_type` → canviar estil (Candles, HeikinAshi, Line, Area, Renko, etc.)
+- `chart_manage_indicator` → afegir o eliminar estudis (usar nom complet: "Relative Strength Index", no "RSI")
+- `chart_scroll_to_date` → saltar a una data (format ISO: "2025-01-15")
+- `chart_set_visible_range` → fer zoom a un rang de dates exacte (timestamps unix)
 
-### "Work on Pine Script"
-1. `pine_set_source` → inject code into editor
-2. `pine_smart_compile` → compile with auto-detection + error check
-3. `pine_get_errors` → read compilation errors
-4. `pine_get_console` → read log.info() output
-5. `pine_get_source` → read current code back (WARNING: can be very large for complex scripts)
-6. `pine_save` → save to TradingView cloud
-7. `pine_new` → create blank indicator/strategy/library
-8. `pine_open` → load a saved script by name
+### "Treballa amb Pine Script"
+1. `pine_set_source` → injectar codi a l'editor
+2. `pine_smart_compile` → compilar amb autodetecció + check d'errors
+3. `pine_get_errors` → llegir errors de compilació
+4. `pine_get_console` → llegir output de `log.info()`
+5. `pine_get_source` → llegir codi actual (AVÍS: pot ser molt gran per scripts complexos)
+6. `pine_save` → desar al núvol TradingView
+7. `pine_new` → crear indicator/strategy/library en blanc
+8. `pine_open` → carregar un script desat pel nom
 
-### "Practice trading with replay"
-1. `replay_start` with `date: "2025-03-01"` → enter replay mode
-2. `replay_step` → advance one bar
-3. `replay_autoplay` → auto-advance (set speed with `speed` param in ms)
-4. `replay_trade` with `action: "buy"/"sell"/"close"` → execute trades
-5. `replay_status` → check position, P&L, current date
-6. `replay_stop` → return to realtime
+### "Practica trading amb replay"
+1. `replay_start` amb `date: "2025-03-01"` → entrar en mode replay
+2. `replay_step` → avançar una barra
+3. `replay_autoplay` → autoavanç (definir velocitat amb param `speed` en ms)
+4. `replay_trade` amb `action: "buy"/"sell"/"close"` → executar operacions
+5. `replay_status` → comprovar posició, P&L, data actual
+6. `replay_stop` → tornar a temps real
 
-### "Screen multiple symbols"
-- `batch_run` with `symbols: ["ES1!", "NQ1!", "YM1!"]` and `action: "screenshot"` or `"get_ohlcv"`
+### "Cribra múltiples símbols"
+- `batch_run` amb `symbols: ["ES1!", "NQ1!", "YM1!"]` i `action: "screenshot"` o `"get_ohlcv"`
 
-### "Draw on the chart"
-- `draw_shape` → horizontal_line, trend_line, rectangle, text (pass point + optional point2)
-- `draw_list` → see what's drawn
-- `draw_remove_one` → remove by ID
-- `draw_clear` → remove all
+### "Dibuixa al gràfic"
+- `draw_shape` → horizontal_line, trend_line, rectangle, text (passar point + point2 opcional)
+- `draw_list` → veure què s'ha dibuixat
+- `draw_remove_one` → eliminar per ID
+- `draw_clear` → eliminar-ho tot
 
-### "Manage alerts"
-- `alert_create` → set price alert (condition: "crossing", "greater_than", "less_than")
-- `alert_list` → view active alerts
-- `alert_delete` → remove alerts
+### "Gestiona alertes"
+- `alert_create` → definir alerta de preu (condició: "crossing", "greater_than", "less_than")
+- `alert_list` → veure alertes actives
+- `alert_delete` → eliminar alertes
 
-### "Navigate the UI"
-- `ui_open_panel` → open/close pine-editor, strategy-tester, watchlist, alerts, trading
-- `ui_click` → click buttons by aria-label, text, or data-name
-- `layout_switch` → load a saved layout by name
-- `ui_fullscreen` → toggle fullscreen
-- `capture_screenshot` → take a screenshot (regions: "full", "chart", "strategy_tester")
+### "Navega per la UI"
+- `ui_open_panel` → obrir/tancar pine-editor, strategy-tester, watchlist, alerts, trading
+- `ui_click` → fer clic en botons per aria-label, text o data-name
+- `layout_switch` → carregar un layout desat pel nom
+- `ui_fullscreen` → commutar pantalla completa
+- `capture_screenshot` → fer captura (regions: "full", "chart", "strategy_tester")
 
-### "TradingView isn't running"
-- `tv_launch` → auto-detect and launch TradingView with CDP on Mac/Win/Linux
-- `tv_health_check` → verify connection is working
+### "TradingView no s'executa"
+- `tv_launch` → autodetectar i llançar TradingView amb CDP a Mac/Win/Linux
+- `tv_health_check` → verificar que la connexió funciona
 
-## Context Management Rules
+## Regles de gestió de context
 
-These tools can return large payloads. Follow these rules to avoid context bloat:
+Aquestes eines poden retornar payloads grans. Seguir aquestes regles per evitar inflar el context:
 
-1. **Always use `summary: true` on `data_get_ohlcv`** unless you specifically need individual bars
-2. **Always use `study_filter`** on pine tools when you know which indicator you want — don't scan all studies unnecessarily
-3. **Never use `verbose: true`** on pine tools unless the user specifically asks for raw drawing data with IDs/colors
-4. **Avoid calling `pine_get_source`** on complex scripts — it can return 200KB+. Only read if you need to edit the code.
-5. **Avoid calling `data_get_indicator`** on protected/encrypted indicators — their inputs are encoded blobs. Use `data_get_study_values` instead for current values.
-6. **Use `capture_screenshot`** for visual context instead of pulling large datasets — a screenshot is ~300KB but gives you the full visual picture
-7. **Call `chart_get_state` once** at the start to get entity IDs, then reference them — don't re-call repeatedly
-8. **Cap your OHLCV requests** — `count: 20` for quick analysis, `count: 100` for deeper work, `count: 500` only when specifically needed
+1. **Sempre `summary: true` a `data_get_ohlcv`** llevat que es necessitin barres individuals
+2. **Sempre `study_filter`** a les eines pine quan saps quin indicador vols — no escanegis tots els estudis innecessàriament
+3. **Mai `verbose: true`** a eines pine excepte si l'usuari ho demana per raw drawing data amb IDs/colors
+4. **Evita `pine_get_source`** en scripts complexos — pot retornar 200KB+. Només llegir-ho si cal editar el codi
+5. **Evita `data_get_indicator`** en indicadors protegits/xifrats — els seus inputs són blobs codificats. Usa `data_get_study_values` per valors actuals
+6. **Usa `capture_screenshot`** per context visual en comptes de descarregar grans datasets — una captura són ~300KB però et dona el quadre visual complet
+7. **Crida `chart_get_state` una sola vegada** al principi per obtenir entity IDs, després referencia'ls — no la repeteixis
+8. **Limita les peticions OHLCV** — `count: 20` per anàlisi ràpida, `count: 100` per feina profunda, `count: 500` només quan calgui realment
 
-### Output Size Estimates (compact mode)
-| Tool | Typical Output |
+### Mides d'output (mode compacte)
+| Eina | Output típic |
 |------|---------------|
 | `quote_get` | ~200 bytes |
-| `data_get_study_values` | ~500 bytes (all indicators) |
-| `data_get_pine_lines` | ~1-3 KB per study (deduplicated levels) |
-| `data_get_pine_labels` | ~2-5 KB per study (capped at 50) |
-| `data_get_pine_tables` | ~1-4 KB per study (formatted rows) |
-| `data_get_pine_boxes` | ~1-2 KB per study (deduplicated zones) |
+| `data_get_study_values` | ~500 bytes (tots els indicadors) |
+| `data_get_pine_lines` | ~1-3 KB per estudi (nivells deduplicats) |
+| `data_get_pine_labels` | ~2-5 KB per estudi (limitat a 50) |
+| `data_get_pine_tables` | ~1-4 KB per estudi (files formatades) |
+| `data_get_pine_boxes` | ~1-2 KB per estudi (zones deduplicades) |
 | `data_get_ohlcv` (summary) | ~500 bytes |
-| `data_get_ohlcv` (100 bars) | ~8 KB |
-| `capture_screenshot` | ~300 bytes (returns file path, not image data) |
+| `data_get_ohlcv` (100 barres) | ~8 KB |
+| `capture_screenshot` | ~300 bytes (retorna path al fitxer, no la imatge) |
 
-## Tool Conventions
+## Convencions de les eines
 
-- All tools return `{ success: true/false, ... }`
-- Entity IDs (from `chart_get_state`) are session-specific — don't cache across sessions
-- Pine indicators must be **visible** on chart for pine graphics tools to read their data
-- `chart_manage_indicator` requires **full indicator names**: "Relative Strength Index" not "RSI", "Moving Average Exponential" not "EMA", "Bollinger Bands" not "BB"
-- Screenshots save to `screenshots/` directory with timestamps
-- OHLCV capped at 500 bars, trades at 20 per request
-- Pine labels capped at 50 per study by default (pass `max_labels` to override)
+- Totes les eines retornen `{ success: true/false, ... }`
+- Els entity IDs (de `chart_get_state`) són específics de sessió — no els guardis entre sessions (la sessió CDP s'inicialitza nova en cada connexió)
+- Els indicadors Pine han d'estar **visibles** al gràfic perquè les eines de gràfics Pine puguin llegir les seves dades
+- `chart_manage_indicator` requereix **noms d'indicador complets**: "Relative Strength Index" no "RSI", "Moving Average Exponential" no "EMA", "Bollinger Bands" no "BB"
+- Les captures es desen al directori `screenshots/` amb timestamps
+- OHLCV limitat a 500 barres, trades a 20 per petició
+- Pine labels limitades a 50 per estudi per defecte (passar `max_labels` per sobreescriure)
 
-## Architecture
+## Arquitectura
 
 ```
 Claude Code ←→ MCP Server (stdio) ←→ CDP (localhost:9222) ←→ TradingView Desktop (Electron)
 ```
 
-Pine graphics path: `study._graphics._primitivesCollection.dwglines.get('lines').get(false)._primitivesDataById`
+Path de Pine graphics: `study._graphics._primitivesCollection.dwglines.get('lines').get(false)._primitivesDataById`
+
+## Integració amb l'ecosistema
+
+- **Llançament local**: `tv_launch` cobreix l'arrencada automàtica. No hi ha LaunchAgent dedicat (la UI de TradingView és interactiva).
+- **Ús des de mercat-obert**: el pipeline V.11.4 pot consultar dades visuals via aquest MCP (capture_screenshot per a l'anàlisi tècnica complementària).
+- **Fork**: aquesta és la versió de David Ortega del projecte de LewisWJackson, mantenida localment dins `~/Claude/Eines/tradingview-mcp/`.
