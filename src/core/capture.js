@@ -2,7 +2,8 @@
  * Core screenshot/capture logic.
  */
 import { getClient, evaluate, getChartCollection } from "../connection.js";
-import { writeFileSync, mkdirSync } from "fs";
+import { mkdirSync, readdirSync, statSync, unlinkSync } from "fs";
+import { writeFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -87,13 +88,24 @@ export async function captureScreenshot({ region, filename, method } = {}) {
   if (clip) params.clip = clip;
 
   const { data } = await client.Page.captureScreenshot(params);
-  writeFileSync(filePath, Buffer.from(data, "base64"));
+  const buf = Buffer.from(data, "base64");
+  await writeFile(filePath, buf);
+
+  // Neteja screenshots de més de 7 dies
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  try {
+    for (const f of readdirSync(SCREENSHOT_DIR)) {
+      if (!f.endsWith(".png")) continue;
+      const fp = join(SCREENSHOT_DIR, f);
+      if (statSync(fp).mtimeMs < cutoff) unlinkSync(fp);
+    }
+  } catch { /* directori buit o error no crític */ }
 
   return {
     success: true,
     method: "cdp",
     file_path: filePath,
     region,
-    size_bytes: Buffer.from(data, "base64").length,
+    size_bytes: buf.length,
   };
 }

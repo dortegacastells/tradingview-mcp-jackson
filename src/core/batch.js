@@ -3,7 +3,8 @@
  */
 import { evaluate, evaluateAsync, getClient, getChartApi, getChartCollection } from '../connection.js';
 import { waitForChartReady } from '../wait.js';
-import { writeFileSync, mkdirSync } from 'fs';
+import { mkdirSync } from 'fs';
+import { writeFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -23,12 +24,14 @@ export async function batchRun({ symbols, timeframes, action, delay_ms, ohlcv_co
     for (const tf of tfs) {
       const combo = { symbol, timeframe: tf };
       try {
-        if (colPath) await evaluate(`${colPath}.setSymbol('${symbol}')`);
-        else if (apiPath) await evaluate(`${apiPath}.setSymbol('${symbol}')`);
+        const safeSymbol = symbol.replace(/'/g, "\\'");
+        const safeTf = tf ? tf.replace(/'/g, "\\'") : tf;
+        if (colPath) await evaluate(`${colPath}.setSymbol('${safeSymbol}')`);
+        else if (apiPath) await evaluate(`${apiPath}.setSymbol('${safeSymbol}')`);
 
-        if (tf) {
-          if (colPath) await evaluate(`${colPath}.setResolution('${tf}')`);
-          else if (apiPath) await evaluate(`${apiPath}.setResolution('${tf}')`);
+        if (safeTf) {
+          if (colPath) await evaluate(`${colPath}.setResolution('${safeTf}')`);
+          else if (apiPath) await evaluate(`${apiPath}.setResolution('${safeTf}')`);
         }
 
         await waitForChartReady(symbol);
@@ -42,7 +45,7 @@ export async function batchRun({ symbols, timeframes, action, delay_ms, ohlcv_co
           const ts = new Date().toISOString().replace(/[:.]/g, '-');
           const fname = `batch_${symbol}_${tf || 'default'}_${ts}.png`;
           const filePath = join(SCREENSHOT_DIR, fname);
-          writeFileSync(filePath, Buffer.from(data, 'base64'));
+          await writeFile(filePath, Buffer.from(data, 'base64'));
           actionResult = { file_path: filePath };
         } else if (action === 'get_ohlcv' && apiPath) {
           const limit = Math.min(ohlcv_count || 100, 500);
