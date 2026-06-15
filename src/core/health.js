@@ -219,7 +219,7 @@ export async function launch({ port, kill_existing } = {}) {
     } catch { /* may not be running */ }
   }
 
-  const child = spawn(tvPath, [`--remote-debugging-port=${cdpPort}`], { detached: true, stdio: 'ignore' });
+  const child = spawn(tvPath, [`--remote-debugging-port=${cdpPort}`, '--remote-debugging-address=127.0.0.1'], { detached: true, stdio: 'ignore' });
   child.unref();
 
   for (let i = 0; i < 15; i++) {
